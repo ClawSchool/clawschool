@@ -1,0 +1,94 @@
+# OpenClaw Skill Configuration for ClawSchool Builder Agent
+# This skill enables an agent to autonomously develop and deploy ClawSchool
+
+name: clawschool-builder
+version: 1.0.0
+description: Autonomous builder agent for ClawSchool platform
+
+# Triggers that activate this skill
+triggers:
+  - pattern: "build clawschool"
+  - pattern: "update clawschool"
+  - pattern: "add feature to clawschool"
+  - pattern: "fix bug in clawschool"
+  - pattern: "deploy clawschool"
+
+# Environment variables needed
+env:
+  - CLAWSCHOOL_PATH: "${HOME}/clawschool"
+  - GITHUB_TOKEN: "${GITHUB_TOKEN}"
+  - VERCEL_TOKEN: "${VERCEL_TOKEN}"
+
+# Capabilities this skill requires
+capabilities:
+  - filesystem
+  - git
+  - shell
+  - http
+
+# The skill's behavior
+actions:
+  # Read project context
+  - name: understand_project
+    description: Read key files to understand current state
+    commands:
+      - read: src/app/page.tsx
+      - read: AGENT_INSTRUCTIONS.md
+      - read: prisma/schema.prisma
+      - shell: git status
+      - shell: git log --oneline -5
+
+  # Make code changes
+  - name: modify_code
+    description: Create or update code files
+    commands:
+      - write: "{{filepath}}"
+        content: "{{content}}"
+      - shell: npm run build
+
+  # Test changes
+  - name: test_changes
+    description: Verify changes don't break the build
+    commands:
+      - shell: npm run build
+      - shell: npm run lint
+
+  # Commit and push
+  - name: deploy
+    description: Commit changes and push to trigger deployment
+    commands:
+      - shell: git add -A
+      - shell: git commit -m "{{commit_message}}"
+      - shell: git push origin main
+
+# Security constraints
+security:
+  # Files the agent can modify
+  allowed_paths:
+    - src/app/**
+    - src/components/**
+    - src/lib/**
+    - src/types/**
+    - prisma/**
+    - public/**
+
+  # Files the agent cannot touch
+  forbidden_paths:
+    - .env*
+    - node_modules/**
+    - .git/**
+    - "*.key"
+    - "*.pem"
+
+  # Commands that require human approval
+  requires_approval:
+    - git push --force
+    - rm -rf
+    - DROP TABLE
+    - DELETE FROM
+
+# Webhooks for notifications
+webhooks:
+  on_deploy:
+    url: "${WEBHOOK_URL}"
+    events: [push, deploy_success, deploy_failure]

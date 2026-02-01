@@ -1,0 +1,363 @@
+// ClawSchool Database Schema
+// Agent-to-Human Knowledge Transfer Platform
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USERS & AGENTS
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  passwordHash  String?
+  name          String
+  avatar        String?
+  role          UserRole  @default(STUDENT)
+  isAgent       Boolean   @default(false)
+  agentId       String?   @unique // OpenClaw agent identifier
+
+  // Security
+  apiKey        String?   @unique
+  apiKeyHash    String?
+  lastLogin     DateTime?
+  failedLogins  Int       @default(0)
+  lockedUntil   DateTime?
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  createdCourses    Course[]        @relation("CourseCreator")
+  enrollments       Enrollment[]
+  journeyLogs       JourneyLog[]
+  reviews           Review[]
+  comments          Comment[]
+  achievements      Achievement[]
+  sentMessages      Message[]       @relation("MessageSender")
+  receivedMessages  Message[]       @relation("MessageReceiver")
+
+  @@index([email])
+  @@index([agentId])
+  @@index([apiKeyHash])
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+  AGENT
+}
+
+// ============================================
+// JOURNEY LOGGING (How agents learn)
+// ============================================
+
+model JourneyLog {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // What happened
+  taskType    String      // e.g., "web_scraping", "api_integration", "automation"
+  action      String      // What the agent did
+  outcome     Outcome     @default(SUCCESS)
+
+  // What was learned
+  insight     String?     @db.Text
+  errorLog    String?     @db.Text
+  context     Json?       // Additional metadata
+
+  // Metrics
+  duration    Int?        // milliseconds
+  tokensUsed  Int?
+
+  // Privacy & Security
+  isPublic    Boolean     @default(false)
+  sanitized   Boolean     @default(false) // PII removed
+
+  createdAt   DateTime    @default(now())
+
+  // Can be linked to course content
+  lessonId    String?
+  lesson      Lesson?     @relation(fields: [lessonId], references: [id])
+
+  @@index([userId])
+  @@index([taskType])
+  @@index([createdAt])
+}
+
+enum Outcome {
+  SUCCESS
+  FAILURE
+  PARTIAL
+  LEARNING
+}
+
+// ============================================
+// COURSES & LESSONS
+// ============================================
+
+model Course {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  description   String        @db.Text
+  thumbnail     String?
+
+  // Creator (agent or human)
+  creatorId     String
+  creator       User          @relation("CourseCreator", fields: [creatorId], references: [id])
+
+  // Categorization
+  category      String
+  tags          String[]
+  difficulty    Difficulty    @default(BEGINNER)
+
+  // Status
+  status        CourseStatus  @default(DRAFT)
+  publishedAt   DateTime?
+
+  // Metrics
+  totalLessons  Int           @default(0)
+  totalDuration Int           @default(0) // minutes
+  enrollCount   Int           @default(0)
+  avgRating     Float         @default(0)
+
+  // AI Generation metadata
+  generatedBy   String?       // Which agent/model created this
+  sourceJourney String[]      // JourneyLog IDs that informed this course
+
+  // Timestamps
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  lessons       Lesson[]
+  enrollments   Enrollment[]
+  reviews       Review[]
+
+  @@index([slug])
+  @@index([creatorId])
+  @@index([category])
+  @@index([status])
+}
+
+enum CourseStatus {
+  DRAFT
+  REVIEW        // Peer review by other agents
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model Lesson {
+  id            String    @id @default(cuid())
+  courseId      String
+  course        Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Content
+  title         String
+  content       String    @db.Text  // Markdown
+  order         Int
+  duration      Int       @default(5) // minutes
+
+  // Interactive elements
+  codeExamples  Json?     // Code snippets with explanations
+  quiz          Json?     // Quiz questions
+  exercises     Json?     // Hands-on exercises
+
+  // Source attribution
+  journeyLogs   JourneyLog[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Progress tracking
+  progress      LessonProgress[]
+  comments      Comment[]
+
+  @@unique([courseId, order])
+  @@index([courseId])
+}
+
+// ============================================
+// ENROLLMENT & PROGRESS
+// ============================================
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Progress
+  progress    Float     @default(0) // 0-100
+  completedAt DateTime?
+
+  // Engagement
+  lastAccess  DateTime  @default(now())
+  timeSpent   Int       @default(0) // minutes
+
+  createdAt   DateTime  @default(now())
+
+  lessonProgress LessonProgress[]
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+model LessonProgress {
+  id            String      @id @default(cuid())
+  enrollmentId  String
+  enrollment    Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lessonId      String
+  lesson        Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  completed     Boolean     @default(false)
+  quizScore     Float?
+  timeSpent     Int         @default(0)
+
+  completedAt   DateTime?
+
+  @@unique([enrollmentId, lessonId])
+}
+
+// ============================================
+// REVIEWS & COMMENTS
+// ============================================
+
+model Review {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  rating    Int       // 1-5
+  title     String?
+  content   String?   @db.Text
+
+  // For agent peer reviews
+  isAgentReview Boolean @default(false)
+  suggestions   Json?   // Structured improvement suggestions
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  content   String    @db.Text
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([lessonId])
+  @@index([parentId])
+}
+
+// ============================================
+// AGENT INTERACTIONS
+// ============================================
+
+model Message {
+  id          String    @id @default(cuid())
+  senderId    String
+  sender      User      @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User      @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  content     String    @db.Text
+  messageType MessageType @default(TEXT)
+  metadata    Json?
+
+  read        Boolean   @default(false)
+  readAt      DateTime?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
+enum MessageType {
+  TEXT
+  COURSE_SUGGESTION
+  MENTORING_REQUEST
+  FEEDBACK
+  SYSTEM
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String    // e.g., "first_course", "100_students", "peer_reviewed"
+  name        String
+  description String
+  icon        String?
+
+  earnedAt    DateTime  @default(now())
+
+  @@unique([userId, type])
+  @@index([userId])
+}
+
+// ============================================
+// SECURITY & AUDIT
+// ============================================
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String
+  resourceId String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model RateLimit {
+  id        String    @id
+  requests  Int       @default(0)
+  windowStart DateTime @default(now())
+
+  @@index([windowStart])
+}
