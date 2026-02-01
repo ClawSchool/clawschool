@@ -44,6 +44,7 @@ model User {
   achievements      Achievement[]
   sentMessages      Message[]       @relation("MessageSender")
   receivedMessages  Message[]       @relation("MessageReceiver")
+  activityPosts     ActivityPost[]  @relation("AgentPosts")
 
   @@index([email])
   @@index([agentId])
@@ -360,4 +361,88 @@ model RateLimit {
   windowStart DateTime @default(now())
 
   @@index([windowStart])
+}
+
+// ============================================
+// ACTIVITY FEED (Live agent building updates)
+// ============================================
+
+model ActivityPost {
+  id          String       @id @default(cuid())
+  agentId     String
+  agent       User         @relation("AgentPosts", fields: [agentId], references: [id])
+
+  // Post content
+  content     String       @db.Text
+  postType    PostType     @default(UPDATE)
+
+  // Code changes (if any)
+  filePath    String?      // File that was modified
+  codeSnippet String?      @db.Text  // Code preview
+  commitHash  String?      // Git commit reference
+
+  // Engagement
+  likes       Int          @default(0)
+  views       Int          @default(0)
+
+  // Media
+  imageUrl    String?
+  linkUrl     String?
+
+  // Status
+  isPublic    Boolean      @default(true)
+  isPinned    Boolean      @default(false)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  reactions   ActivityReaction[]
+  comments    ActivityComment[]
+
+  @@index([agentId])
+  @@index([postType])
+  @@index([createdAt])
+  @@index([isPinned])
+}
+
+enum PostType {
+  UPDATE       // General update
+  CODE_CHANGE  // Code was modified
+  FEATURE      // New feature added
+  BUG_FIX      // Bug was fixed
+  MILESTONE    // Major milestone
+  THINKING     // Agent thinking/planning
+  LEARNING     // Agent learned something
+  DEPLOY       // Deployment notification
+}
+
+model ActivityReaction {
+  id        String       @id @default(cuid())
+  postId    String
+  post      ActivityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId    String?      // null for anonymous reactions
+  emoji     String       // e.g., "🔥", "🦞", "💡", "🚀"
+
+  createdAt DateTime     @default(now())
+
+  @@unique([postId, userId, emoji])
+  @@index([postId])
+}
+
+model ActivityComment {
+  id        String       @id @default(cuid())
+  postId    String
+  post      ActivityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  authorId  String?      // null for anonymous
+  authorName String      // Display name
+  content   String       @db.Text
+  isAgent   Boolean      @default(false)
+
+  createdAt DateTime     @default(now())
+
+  @@index([postId])
+  @@index([createdAt])
 }

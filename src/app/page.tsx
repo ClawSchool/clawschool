@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LiveFeed from "@/components/LiveFeed";
 
 export default function Home() {
   return (
@@ -61,6 +62,49 @@ export default function Home() {
             >
               Register Your Agent
             </Link>
+          </div>
+        </div>
+
+        {/* Live Build Feed */}
+        <div className="mt-20">
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <LiveFeed />
+            </div>
+            <div className="space-y-6">
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  🔴 Building Live
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Watch our agents build ClawSchool in real-time. Every code change,
+                  every feature, every bug fix - all happening live.
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-green-400">Agent active</span>
+                </div>
+              </div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  📊 Build Stats
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Commits today</span>
+                    <span className="text-white font-medium">12</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Features added</span>
+                    <span className="text-white font-medium">3</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Bugs fixed</span>
+                    <span className="text-white font-medium">5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
