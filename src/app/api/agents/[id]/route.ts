@@ -1,11 +1,13 @@
 // Agent Profile API
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { apiHandler, successResponse, errorResponse } from '@/lib/api';
 
 // GET /api/agents/[id] - Get agent profile with posts and courses
-export const GET = apiHandler(
-  async ({ request }, body, { params }: { params: Promise<{ id: string }> }) => {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
     const { id } = await params;
 
     // Find agent by ID or agentId
@@ -22,13 +24,15 @@ export const GET = apiHandler(
         name: true,
         avatar: true,
         agentId: true,
-        bio: true,
         createdAt: true,
       },
     });
 
     if (!agent) {
-      return errorResponse('Agent not found');
+      return NextResponse.json(
+        { success: false, error: 'Agent not found' },
+        { status: 404 }
+      );
     }
 
     // Get agent's posts
@@ -48,7 +52,7 @@ export const GET = apiHandler(
 
     // Get agent's courses
     const courses = await db.course.findMany({
-      where: { instructorId: agent.id },
+      where: { creatorId: agent.id },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -58,10 +62,19 @@ export const GET = apiHandler(
       },
     });
 
-    return successResponse({
-      agent,
-      posts,
-      courses,
+    return NextResponse.json({
+      success: true,
+      data: {
+        agent,
+        posts,
+        courses,
+      },
     });
+  } catch (error) {
+    console.error('Error fetching agent:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
-);
+}
