@@ -912,6 +912,499 @@ export default function CourseCard({
   return true;
 }
 
+async function createCourseViewerPage() {
+  log('task', 'Creating course viewer page...');
+
+  const coursePage = `// Course Viewer Page
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+
+interface Course {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  thumbnail?: string;
+  category: string;
+  difficulty: string;
+  estimatedHours?: number;
+  creator: {
+    id: string;
+    name: string;
+    avatar?: string;
+    agentId?: string;
+  };
+  lessons: {
+    id: string;
+    title: string;
+    order: number;
+    durationMinutes?: number;
+  }[];
+  _count: {
+    enrollments: number;
+  };
+}
+
+export default function CourseViewerPage() {
+  const params = useParams();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [enrolled, setEnrolled] = useState(false);
+
+  useEffect(() => {
+    async function fetchCourse() {
+      try {
+        const res = await fetch(\`/api/courses/\${params.slug}\`);
+        const data = await res.json();
+        if (data.success) {
+          setCourse(data.data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch course:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCourse();
+  }, [params.slug]);
+
+  const handleEnroll = async () => {
+    // TODO: Implement enrollment
+    setEnrolled(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading course...</div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Course not found</h1>
+          <Link href="/courses" className="text-purple-400 hover:text-purple-300">
+            Browse all courses →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const difficultyColors: Record<string, string> = {
+    BEGINNER: 'bg-green-500/20 text-green-300',
+    INTERMEDIATE: 'bg-yellow-500/20 text-yellow-300',
+    ADVANCED: 'bg-red-500/20 text-red-300',
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <div className="bg-black/20 border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <Link href="/courses" className="text-purple-400 hover:text-purple-300 text-sm">
+            ← Back to Courses
+          </Link>
+        </div>
+      </div>
+
+      {/* Hero */}
+      <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="px-3 py-1 rounded-full text-sm bg-purple-500/20 text-purple-300">
+                  {course.category}
+                </span>
+                <span className={\`px-3 py-1 rounded-full text-sm \${difficultyColors[course.difficulty] || difficultyColors.BEGINNER}\`}>
+                  {course.difficulty}
+                </span>
+              </div>
+              <h1 className="text-4xl font-bold text-white mb-4">{course.title}</h1>
+              <p className="text-gray-300 text-lg mb-6">{course.description}</p>
+              <div className="flex items-center gap-6 text-sm text-gray-400">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
+                    {course.creator.avatar || '🤖'}
+                  </span>
+                  <Link
+                    href={\`/agents/\${course.creator.agentId || course.creator.id}\`}
+                    className="hover:text-purple-300"
+                  >
+                    {course.creator.name}
+                  </Link>
+                </div>
+                <div>{course._count.enrollments.toLocaleString()} students</div>
+                {course.estimatedHours && <div>{course.estimatedHours} hours</div>}
+                <div>{course.lessons.length} lessons</div>
+              </div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+              <div
+                className="h-40 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 mb-6"
+                style={course.thumbnail ? { backgroundImage: \`url(\${course.thumbnail})\`, backgroundSize: 'cover' } : {}}
+              />
+              {enrolled ? (
+                <Link
+                  href={\`/courses/\${course.slug}/lessons/\${course.lessons[0]?.id || ''}\`}
+                  className="block w-full py-3 rounded-xl bg-green-600 text-white font-semibold text-center hover:bg-green-500 transition"
+                >
+                  Continue Learning →
+                </Link>
+              ) : (
+                <button
+                  onClick={handleEnroll}
+                  className="w-full py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-500 transition"
+                >
+                  Start Learning - Free
+                </button>
+              )}
+              <p className="text-center text-gray-500 text-sm mt-4">
+                Full access to all lessons
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <h2 className="text-2xl font-bold text-white mb-6">Course Content</h2>
+        <div className="space-y-3">
+          {course.lessons.length === 0 ? (
+            <div className="bg-white/5 rounded-xl p-8 text-center text-gray-400">
+              No lessons yet. Check back soon!
+            </div>
+          ) : (
+            course.lessons.map((lesson, index) => (
+              <div
+                key={lesson.id}
+                className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-purple-500/50 transition flex items-center gap-4"
+              >
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300 font-semibold">
+                  {index + 1}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-medium">{lesson.title}</h3>
+                  {lesson.durationMinutes && (
+                    <p className="text-gray-500 text-sm">{lesson.durationMinutes} min</p>
+                  )}
+                </div>
+                {enrolled ? (
+                  <Link
+                    href={\`/courses/\${course.slug}/lessons/\${lesson.id}\`}
+                    className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-300 text-sm hover:bg-purple-500/30 transition"
+                  >
+                    Start
+                  </Link>
+                ) : (
+                  <span className="text-gray-500 text-sm">🔒 Locked</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/courses/[slug]');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'page.tsx'), coursePage);
+
+  log('success', 'Created course viewer page');
+  return true;
+}
+
+async function createSearchPage() {
+  log('task', 'Creating search page...');
+
+  const searchPage = `// Search Page
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+interface SearchResult {
+  type: 'course' | 'agent';
+  id: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  slug?: string;
+  agentId?: string;
+  avatar?: string;
+  category?: string;
+}
+
+export default function SearchPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'courses' | 'agents'>('all');
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setQuery(q);
+      performSearch(q);
+    }
+  }, [searchParams]);
+
+  const performSearch = async (q: string) => {
+    if (!q.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(\`/api/search?q=\${encodeURIComponent(q)}&type=\${filter}\`);
+      const data = await res.json();
+      if (data.success) {
+        setResults(data.data);
+      }
+    } catch (e) {
+      console.error('Search failed:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    router.push(\`/search?q=\${encodeURIComponent(query)}\`);
+    performSearch(query);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <div className="border-b border-white/10">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <Link href="/" className="text-purple-400 hover:text-purple-300 text-sm mb-4 block">
+            ← Back to Home
+          </Link>
+          <h1 className="text-3xl font-bold text-white mb-6">Search</h1>
+          <form onSubmit={handleSearch} className="flex gap-4">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search courses and agents..."
+              className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-500 transition"
+            >
+              Search
+            </button>
+          </form>
+          <div className="flex gap-2 mt-4">
+            {(['all', 'courses', 'agents'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => { setFilter(f); if (query) performSearch(query); }}
+                className={\`px-4 py-2 rounded-lg text-sm transition \${
+                  filter === f
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                }\`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Results */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {loading ? (
+          <div className="text-center text-gray-400 py-12">Searching...</div>
+        ) : results.length === 0 && query ? (
+          <div className="text-center text-gray-400 py-12">
+            No results found for "{query}"
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {results.map((result) => (
+              <Link
+                key={\`\${result.type}-\${result.id}\`}
+                href={result.type === 'course' ? \`/courses/\${result.slug}\` : \`/agents/\${result.agentId}\`}
+                className="block"
+              >
+                <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-purple-500/50 transition">
+                  <div className="flex items-start gap-4">
+                    {result.type === 'agent' ? (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl">
+                        {result.avatar || '🤖'}
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-xl">
+                        📚
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-300">
+                          {result.type}
+                        </span>
+                        {result.category && (
+                          <span className="text-xs px-2 py-1 rounded bg-white/10 text-gray-400">
+                            {result.category}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {result.title || result.name}
+                      </h3>
+                      {result.description && (
+                        <p className="text-gray-400 text-sm mt-1 line-clamp-2">
+                          {result.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/search');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'page.tsx'), searchPage);
+
+  log('success', 'Created search page');
+  return true;
+}
+
+async function createSearchAPI() {
+  log('task', 'Creating search API...');
+
+  const searchAPI = `// Search API
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q') || '';
+    const type = searchParams.get('type') || 'all';
+
+    if (!query.trim()) {
+      return NextResponse.json({ success: true, data: [] });
+    }
+
+    const results: Array<{
+      type: 'course' | 'agent';
+      id: string;
+      title?: string;
+      name?: string;
+      description?: string;
+      slug?: string;
+      agentId?: string;
+      avatar?: string;
+      category?: string;
+    }> = [];
+
+    // Search courses
+    if (type === 'all' || type === 'courses') {
+      const courses = await db.course.findMany({
+        where: {
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { description: { contains: query, mode: 'insensitive' } },
+            { category: { contains: query, mode: 'insensitive' } },
+          ],
+          status: 'PUBLISHED',
+        },
+        take: 10,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          slug: true,
+          category: true,
+        },
+      });
+
+      for (const course of courses) {
+        results.push({
+          type: 'course',
+          id: course.id,
+          title: course.title,
+          description: course.description,
+          slug: course.slug,
+          category: course.category,
+        });
+      }
+    }
+
+    // Search agents
+    if (type === 'all' || type === 'agents') {
+      const agents = await db.user.findMany({
+        where: {
+          isAgent: true,
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { agentId: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        take: 10,
+        select: {
+          id: true,
+          name: true,
+          agentId: true,
+          avatar: true,
+        },
+      });
+
+      for (const agent of agents) {
+        results.push({
+          type: 'agent',
+          id: agent.id,
+          name: agent.name,
+          agentId: agent.agentId || agent.id,
+          avatar: agent.avatar || undefined,
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, data: results });
+  } catch (error) {
+    console.error('Search error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Search failed' },
+      { status: 500 }
+    );
+  }
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/api/search');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'route.ts'), searchAPI);
+
+  log('success', 'Created search API');
+  return true;
+}
+
 // ============================================
 // TASK EXECUTION
 // ============================================
@@ -929,6 +1422,15 @@ const TASK_HANDLERS = {
   'course-card-component': async () => {
     await createCourseCardComponent();
     return 'Created CourseCard component';
+  },
+  'course-viewer': async () => {
+    await createCourseViewerPage();
+    return 'Created course viewer page';
+  },
+  'search-functionality': async () => {
+    await createSearchPage();
+    await createSearchAPI();
+    return 'Created search page and API';
   },
 };
 
