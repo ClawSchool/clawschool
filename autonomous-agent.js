@@ -131,6 +131,54 @@ const TASK_QUEUE = [
     status: 'pending',
     files: ['src/components/ThemeToggle.tsx'],
   },
+  {
+    id: 'lesson-viewer',
+    name: 'Lesson Viewer Page',
+    description: 'Create lesson viewing experience with content display',
+    priority: 8,
+    status: 'pending',
+    files: ['src/app/courses/[slug]/lessons/[id]/page.tsx', 'src/app/api/lessons/[id]/route.ts'],
+  },
+  {
+    id: 'enrollment-system',
+    name: 'Course Enrollment System',
+    description: 'API and UI for enrolling in courses',
+    priority: 9,
+    status: 'pending',
+    files: ['src/app/api/courses/[slug]/enroll/route.ts'],
+  },
+  {
+    id: 'course-creation',
+    name: 'Course Creation for Agents',
+    description: 'API for agents to create and publish courses',
+    priority: 10,
+    status: 'pending',
+    files: ['src/app/api/agents/courses/route.ts'],
+  },
+  {
+    id: 'user-dashboard',
+    name: 'User Dashboard',
+    description: 'Dashboard showing enrolled courses and progress',
+    priority: 11,
+    status: 'pending',
+    files: ['src/app/dashboard/page.tsx'],
+  },
+  {
+    id: 'notifications-system',
+    name: 'Notifications System',
+    description: 'Bell icon with dropdown for notifications',
+    priority: 12,
+    status: 'pending',
+    files: ['src/components/Notifications.tsx', 'src/app/api/notifications/route.ts'],
+  },
+  {
+    id: 'mobile-nav',
+    name: 'Mobile Navigation',
+    description: 'Responsive hamburger menu for mobile devices',
+    priority: 13,
+    status: 'pending',
+    files: ['src/components/MobileNav.tsx'],
+  },
 ];
 
 // ============================================
@@ -1406,6 +1454,1048 @@ export async function GET(request: NextRequest) {
 }
 
 // ============================================
+// NEW FEATURE IMPLEMENTATIONS
+// ============================================
+
+async function createLessonViewerPage() {
+  log('task', 'Creating lesson viewer page...');
+
+  const lessonPage = `// Lesson Viewer Page
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+
+interface Lesson {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+  durationMinutes?: number;
+  videoUrl?: string;
+  course: {
+    id: string;
+    title: string;
+    slug: string;
+    lessons: { id: string; title: string; order: number }[];
+  };
+}
+
+export default function LessonViewerPage() {
+  const params = useParams();
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLesson() {
+      try {
+        const res = await fetch(\`/api/lessons/\${params.id}\`);
+        const data = await res.json();
+        if (data.success) {
+          setLesson(data.data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch lesson:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLesson();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading lesson...</div>
+      </div>
+    );
+  }
+
+  if (!lesson) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Lesson not found</h1>
+          <Link href="/courses" className="text-purple-400 hover:text-purple-300">
+            Browse courses →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const currentIndex = lesson.course.lessons.findIndex(l => l.id === lesson.id);
+  const prevLesson = lesson.course.lessons[currentIndex - 1];
+  const nextLesson = lesson.course.lessons[currentIndex + 1];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <div className="bg-black/20 border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href={\`/courses/\${lesson.course.slug}\`} className="text-purple-400 hover:text-purple-300 text-sm">
+            ← Back to {lesson.course.title}
+          </Link>
+          <span className="text-gray-400 text-sm">
+            Lesson {lesson.order} of {lesson.course.lessons.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-white mb-6">{lesson.title}</h1>
+
+        {/* Video Player (if available) */}
+        {lesson.videoUrl && (
+          <div className="mb-8 rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+            <span className="text-gray-500">Video Player: {lesson.videoUrl}</span>
+          </div>
+        )}
+
+        {/* Lesson Content */}
+        <div className="prose prose-invert max-w-none">
+          <div className="bg-white/5 rounded-xl p-8 border border-white/10">
+            <div className="text-gray-300 whitespace-pre-wrap">{lesson.content}</div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between mt-8 pt-8 border-t border-white/10">
+          {prevLesson ? (
+            <Link
+              href={\`/courses/\${lesson.course.slug}/lessons/\${prevLesson.id}\`}
+              className="px-6 py-3 rounded-xl bg-white/5 text-white hover:bg-white/10 transition"
+            >
+              ← Previous: {prevLesson.title}
+            </Link>
+          ) : <div />}
+          {nextLesson ? (
+            <Link
+              href={\`/courses/\${lesson.course.slug}/lessons/\${nextLesson.id}\`}
+              className="px-6 py-3 rounded-xl bg-purple-600 text-white hover:bg-purple-500 transition"
+            >
+              Next: {nextLesson.title} →
+            </Link>
+          ) : (
+            <Link
+              href={\`/courses/\${lesson.course.slug}\`}
+              className="px-6 py-3 rounded-xl bg-green-600 text-white hover:bg-green-500 transition"
+            >
+              Complete Course 🎉
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar - Lesson List */}
+      <div className="fixed right-4 top-24 w-72 max-h-[calc(100vh-120px)] overflow-y-auto bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4 hidden lg:block">
+        <h3 className="text-white font-semibold mb-4">Course Content</h3>
+        <div className="space-y-2">
+          {lesson.course.lessons.map((l, i) => (
+            <Link
+              key={l.id}
+              href={\`/courses/\${lesson.course.slug}/lessons/\${l.id}\`}
+              className={\`block p-3 rounded-lg text-sm transition \${
+                l.id === lesson.id
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
+                  : 'text-gray-400 hover:bg-white/5'
+              }\`}
+            >
+              <span className="text-xs text-gray-500 mr-2">{i + 1}.</span>
+              {l.title}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/courses/[slug]/lessons/[id]');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'page.tsx'), lessonPage);
+
+  log('success', 'Created lesson viewer page');
+  return true;
+}
+
+async function createLessonAPI() {
+  log('task', 'Creating lesson API...');
+
+  const lessonAPI = `// Lesson API
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const lesson = await db.lesson.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        order: true,
+        durationMinutes: true,
+        videoUrl: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            lessons: {
+              select: {
+                id: true,
+                title: true,
+                order: true,
+              },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!lesson) {
+      return NextResponse.json(
+        { success: false, error: 'Lesson not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: lesson });
+  } catch (error) {
+    console.error('Error fetching lesson:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/api/lessons/[id]');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'route.ts'), lessonAPI);
+
+  log('success', 'Created lesson API');
+  return true;
+}
+
+async function createEnrollmentAPI() {
+  log('task', 'Creating enrollment API...');
+
+  const enrollAPI = `// Course Enrollment API
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { authenticateRequest } from '@/lib/security';
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+
+    // Require authentication
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Find the course
+    const course = await db.course.findUnique({
+      where: { slug },
+      select: { id: true, title: true },
+    });
+
+    if (!course) {
+      return NextResponse.json(
+        { success: false, error: 'Course not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if already enrolled
+    const existing = await db.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId: auth.user.userId,
+          courseId: course.id,
+        },
+      },
+    });
+
+    if (existing) {
+      return NextResponse.json({
+        success: true,
+        data: { enrolled: true, message: 'Already enrolled' },
+      });
+    }
+
+    // Create enrollment
+    const enrollment = await db.enrollment.create({
+      data: {
+        userId: auth.user.userId,
+        courseId: course.id,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        enrolled: true,
+        enrollmentId: enrollment.id,
+        message: \`Successfully enrolled in \${course.title}\`,
+      },
+    });
+  } catch (error) {
+    console.error('Enrollment error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to enroll' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.user) {
+      return NextResponse.json({ success: true, data: { enrolled: false } });
+    }
+
+    const course = await db.course.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+
+    if (!course) {
+      return NextResponse.json(
+        { success: false, error: 'Course not found' },
+        { status: 404 }
+      );
+    }
+
+    const enrollment = await db.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId: auth.user.userId,
+          courseId: course.id,
+        },
+      },
+      select: {
+        id: true,
+        progress: true,
+        completedAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        enrolled: !!enrollment,
+        progress: enrollment?.progress || 0,
+        completed: !!enrollment?.completedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error checking enrollment:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to check enrollment' },
+      { status: 500 }
+    );
+  }
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/api/courses/[slug]/enroll');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'route.ts'), enrollAPI);
+
+  log('success', 'Created enrollment API');
+  return true;
+}
+
+async function createAgentCourseAPI() {
+  log('task', 'Creating agent course creation API...');
+
+  const courseAPI = `// Agent Course Creation API
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { db } from '@/lib/db';
+import { authenticateRequest } from '@/lib/security';
+
+const courseSchema = z.object({
+  title: z.string().min(3).max(200),
+  description: z.string().min(10).max(2000),
+  category: z.string().default('General'),
+  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).default('BEGINNER'),
+  estimatedHours: z.number().optional(),
+  thumbnail: z.string().url().optional(),
+  lessons: z.array(z.object({
+    title: z.string().min(1).max(200),
+    content: z.string().min(1),
+    order: z.number().int().positive(),
+    durationMinutes: z.number().int().positive().optional(),
+    videoUrl: z.string().url().optional(),
+  })).optional(),
+});
+
+// POST - Create a new course
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!auth.user.isAgent) {
+      return NextResponse.json(
+        { success: false, error: 'Only agents can create courses' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const validation = courseSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Validation failed', errors: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+
+    // Generate unique slug
+    const baseSlug = data.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    let slug = baseSlug;
+    let counter = 1;
+    while (await db.course.findUnique({ where: { slug } })) {
+      slug = \`\${baseSlug}-\${counter++}\`;
+    }
+
+    // Create course with lessons
+    const course = await db.course.create({
+      data: {
+        title: data.title,
+        slug,
+        description: data.description,
+        category: data.category,
+        difficulty: data.difficulty,
+        estimatedHours: data.estimatedHours,
+        thumbnail: data.thumbnail,
+        creatorId: auth.user.userId,
+        status: 'DRAFT',
+        lessons: data.lessons ? {
+          create: data.lessons.map(lesson => ({
+            title: lesson.title,
+            content: lesson.content,
+            order: lesson.order,
+            durationMinutes: lesson.durationMinutes,
+            videoUrl: lesson.videoUrl,
+          })),
+        } : undefined,
+      },
+      include: {
+        lessons: true,
+        _count: { select: { enrollments: true } },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: course,
+    });
+  } catch (error) {
+    console.error('Course creation error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to create course' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - List agent's courses
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const courses = await db.course.findMany({
+      where: { creatorId: auth.user.userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { enrollments: true, lessons: true } },
+      },
+    });
+
+    return NextResponse.json({ success: true, data: courses });
+  } catch (error) {
+    console.error('Error listing courses:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to list courses' },
+      { status: 500 }
+    );
+  }
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/api/agents/courses');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'route.ts'), courseAPI);
+
+  log('success', 'Created agent course creation API');
+  return true;
+}
+
+async function createUserDashboard() {
+  log('task', 'Creating user dashboard...');
+
+  const dashboard = `// User Dashboard Page
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+interface EnrolledCourse {
+  id: string;
+  progress: number;
+  course: {
+    id: string;
+    title: string;
+    slug: string;
+    thumbnail?: string;
+    category: string;
+    _count: { lessons: number };
+  };
+}
+
+export default function DashboardPage() {
+  const [enrollments, setEnrollments] = useState<EnrolledCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEnrollments() {
+      try {
+        const res = await fetch('/api/user/enrollments');
+        const data = await res.json();
+        if (data.success) {
+          setEnrollments(data.data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch enrollments:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEnrollments();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <div className="bg-black/20 border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <Link href="/" className="text-purple-400 hover:text-purple-300 text-sm mb-2 block">
+            ← Back to Home
+          </Link>
+          <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
+          <p className="text-gray-400 mt-1">Track your learning progress</p>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+            <div className="text-3xl font-bold text-white">{enrollments.length}</div>
+            <div className="text-gray-400">Enrolled Courses</div>
+          </div>
+          <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+            <div className="text-3xl font-bold text-green-400">
+              {enrollments.filter(e => e.progress === 100).length}
+            </div>
+            <div className="text-gray-400">Completed</div>
+          </div>
+          <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+            <div className="text-3xl font-bold text-purple-400">
+              {enrollments.filter(e => e.progress > 0 && e.progress < 100).length}
+            </div>
+            <div className="text-gray-400">In Progress</div>
+          </div>
+        </div>
+
+        {/* Course List */}
+        <h2 className="text-xl font-bold text-white mb-4">My Courses</h2>
+        {loading ? (
+          <div className="text-center text-gray-400 py-12">Loading...</div>
+        ) : enrollments.length === 0 ? (
+          <div className="bg-white/5 rounded-xl p-12 text-center border border-white/10">
+            <div className="text-4xl mb-4">📚</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No courses yet</h3>
+            <p className="text-gray-400 mb-6">Start learning by enrolling in a course</p>
+            <Link
+              href="/courses"
+              className="inline-block px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-500 transition"
+            >
+              Browse Courses
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {enrollments.map(enrollment => (
+              <Link
+                key={enrollment.id}
+                href={\`/courses/\${enrollment.course.slug}\`}
+                className="block"
+              >
+                <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:border-purple-500/50 transition">
+                  <div
+                    className="h-32 bg-gradient-to-br from-purple-600 to-pink-600"
+                    style={enrollment.course.thumbnail ? {
+                      backgroundImage: \`url(\${enrollment.course.thumbnail})\`,
+                      backgroundSize: 'cover',
+                    } : {}}
+                  />
+                  <div className="p-4">
+                    <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-300">
+                      {enrollment.course.category}
+                    </span>
+                    <h3 className="text-lg font-semibold text-white mt-2">
+                      {enrollment.course.title}
+                    </h3>
+                    <div className="mt-3">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-400">Progress</span>
+                        <span className="text-white">{enrollment.progress}%</span>
+                      </div>
+                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-500 transition-all"
+                          style={{ width: \`\${enrollment.progress}%\` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/dashboard');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'page.tsx'), dashboard);
+
+  // Also create the user enrollments API
+  const enrollmentsAPI = `// User Enrollments API
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { authenticateRequest } from '@/lib/security';
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const enrollments = await db.enrollment.findMany({
+      where: { userId: auth.user.userId },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        progress: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            thumbnail: true,
+            category: true,
+            _count: { select: { lessons: true } },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ success: true, data: enrollments });
+  } catch (error) {
+    console.error('Error fetching enrollments:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch enrollments' },
+      { status: 500 }
+    );
+  }
+}
+`;
+
+  const apiDir = path.join(CONFIG.projectRoot, 'src/app/api/user/enrollments');
+  if (!fs.existsSync(apiDir)) fs.mkdirSync(apiDir, { recursive: true });
+  fs.writeFileSync(path.join(apiDir, 'route.ts'), enrollmentsAPI);
+
+  log('success', 'Created user dashboard and enrollments API');
+  return true;
+}
+
+async function createNotificationsComponent() {
+  log('task', 'Creating notifications component...');
+
+  const notifications = `// Notifications Component
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+
+interface Notification {
+  id: string;
+  type: 'enrollment' | 'comment' | 'achievement' | 'update';
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  linkUrl?: string;
+}
+
+export default function Notifications() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function fetchNotifications() {
+      try {
+        const res = await fetch('/api/notifications');
+        const data = await res.json();
+        if (data.success) {
+          setNotifications(data.data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch notifications:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchNotifications();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch(\`/api/notifications/\${id}/read\`, { method: 'POST' });
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, read: true } : n)
+      );
+    } catch (e) {
+      console.error('Failed to mark as read:', e);
+    }
+  };
+
+  const typeIcons: Record<string, string> = {
+    enrollment: '📚',
+    comment: '💬',
+    achievement: '🏆',
+    update: '📢',
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative p-2 rounded-lg hover:bg-white/10 transition"
+      >
+        <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-80 bg-slate-800 rounded-xl border border-white/10 shadow-xl overflow-hidden z-50">
+          <div className="p-4 border-b border-white/10">
+            <h3 className="font-semibold text-white">Notifications</h3>
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            {loading ? (
+              <div className="p-4 text-center text-gray-400">Loading...</div>
+            ) : notifications.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">
+                <div className="text-3xl mb-2">🔔</div>
+                No notifications yet
+              </div>
+            ) : (
+              notifications.map(notification => (
+                <div
+                  key={notification.id}
+                  onClick={() => markAsRead(notification.id)}
+                  className={\`p-4 border-b border-white/5 hover:bg-white/5 cursor-pointer transition \${
+                    !notification.read ? 'bg-purple-500/10' : ''
+                  }\`}
+                >
+                  <div className="flex gap-3">
+                    <span className="text-xl">{typeIcons[notification.type]}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{notification.title}</p>
+                      <p className="text-gray-400 text-sm truncate">{notification.message}</p>
+                      <p className="text-gray-500 text-xs mt-1">
+                        {new Date(notification.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {!notification.read && (
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mt-2" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/components');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'Notifications.tsx'), notifications);
+
+  log('success', 'Created notifications component');
+  return true;
+}
+
+async function createNotificationsAPI() {
+  log('task', 'Creating notifications API...');
+
+  const notificationsAPI = `// Notifications API
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { authenticateRequest } from '@/lib/security';
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.user) {
+      return NextResponse.json({ success: true, data: [] });
+    }
+
+    const notifications = await db.notification.findMany({
+      where: { userId: auth.user.userId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        message: true,
+        read: true,
+        linkUrl: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: notifications });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch notifications' },
+      { status: 500 }
+    );
+  }
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/app/api/notifications');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'route.ts'), notificationsAPI);
+
+  log('success', 'Created notifications API');
+  return true;
+}
+
+async function createMobileNav() {
+  log('task', 'Creating mobile navigation...');
+
+  const mobileNav = `// Mobile Navigation Component
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+}
+
+const navItems: NavItem[] = [
+  { label: 'Home', href: '/', icon: '🏠' },
+  { label: 'Courses', href: '/courses', icon: '📚' },
+  { label: 'Agents', href: '/agents', icon: '🤖' },
+  { label: 'Search', href: '/search', icon: '🔍' },
+  { label: 'Dashboard', href: '/dashboard', icon: '📊' },
+];
+
+export default function MobileNav() {
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close menu on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  return (
+    <>
+      {/* Hamburger Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition z-50"
+        aria-label="Toggle menu"
+      >
+        <div className="w-6 h-5 flex flex-col justify-between">
+          <span className={\`block h-0.5 bg-white transition-transform \${isOpen ? 'rotate-45 translate-y-2' : ''}\`} />
+          <span className={\`block h-0.5 bg-white transition-opacity \${isOpen ? 'opacity-0' : ''}\`} />
+          <span className={\`block h-0.5 bg-white transition-transform \${isOpen ? '-rotate-45 -translate-y-2' : ''}\`} />
+        </div>
+      </button>
+
+      {/* Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Slide-out Menu */}
+      <div className={\`fixed top-0 right-0 h-full w-72 bg-slate-900 border-l border-white/10 z-50 transform transition-transform duration-300 lg:hidden \${
+        isOpen ? 'translate-x-0' : 'translate-x-full'
+      }\`}>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-8">
+            <span className="text-xl font-bold text-white">🦞 ClawSchool</span>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-2 rounded-lg hover:bg-white/10 transition"
+            >
+              <span className="text-2xl text-white">×</span>
+            </button>
+          </div>
+
+          <nav className="space-y-2">
+            {navItems.map(item => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={\`flex items-center gap-3 px-4 py-3 rounded-xl transition \${
+                  pathname === item.href
+                    ? 'bg-purple-500/20 text-purple-300'
+                    : 'text-gray-300 hover:bg-white/5'
+                }\`}
+              >
+                <span className="text-xl">{item.icon}</span>
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+
+          <div className="mt-8 pt-8 border-t border-white/10">
+            <Link
+              href="/login"
+              className="block w-full py-3 px-4 rounded-xl bg-white/5 text-white text-center hover:bg-white/10 transition mb-3"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/signup"
+              className="block w-full py-3 px-4 rounded-xl bg-purple-600 text-white text-center hover:bg-purple-500 transition"
+            >
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+`;
+
+  const dir = path.join(CONFIG.projectRoot, 'src/components');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'MobileNav.tsx'), mobileNav);
+
+  log('success', 'Created mobile navigation component');
+  return true;
+}
+
+// ============================================
 // TASK EXECUTION
 // ============================================
 
@@ -1431,6 +2521,32 @@ const TASK_HANDLERS = {
     await createSearchPage();
     await createSearchAPI();
     return 'Created search page and API';
+  },
+  'lesson-viewer': async () => {
+    await createLessonViewerPage();
+    await createLessonAPI();
+    return 'Created lesson viewer page and API';
+  },
+  'enrollment-system': async () => {
+    await createEnrollmentAPI();
+    return 'Created course enrollment API';
+  },
+  'course-creation': async () => {
+    await createAgentCourseAPI();
+    return 'Created agent course creation API';
+  },
+  'user-dashboard': async () => {
+    await createUserDashboard();
+    return 'Created user dashboard page';
+  },
+  'notifications-system': async () => {
+    await createNotificationsComponent();
+    await createNotificationsAPI();
+    return 'Created notifications system';
+  },
+  'mobile-nav': async () => {
+    await createMobileNav();
+    return 'Created mobile navigation component';
   },
 };
 
