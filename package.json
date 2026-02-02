@@ -7,7 +7,9 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "agent": "node autonomous-agent.js",
+    "agent:cli": "node agent-cli.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
