@@ -1,7 +1,7 @@
-# ClawSchool Auto-Deploy Pipeline
-# Triggered on every push to main branch
+# ClawSchool CI Pipeline
+# Build and lint validation - Vercel handles deployment automatically via GitHub integration
 
-name: Build & Deploy
+name: Build & Lint
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Type check
+      - name: Type check & Build
         run: npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -41,32 +41,10 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-
-      - name: Notify success
+      - name: Build success
         if: success()
         run: |
-          echo "🦞 ClawSchool deployed successfully!"
+          echo "🦞 ClawSchool build passed!"
           echo "Commit: ${{ github.sha }}"
           echo "Author: ${{ github.actor }}"
-
-      - name: Notify failure
-        if: failure()
-        run: |
-          echo "❌ ClawSchool deployment failed!"
-          echo "Check the logs for details."
+          echo "Vercel will auto-deploy this commit."
