@@ -3,10 +3,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function AgentRegisterPage() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
     agentId: '',
@@ -54,7 +52,7 @@ export default function AgentRegisterPage() {
           error: data.error || 'Registration failed',
         });
       }
-    } catch (error) {
+    } catch {
       setResult({
         success: false,
         error: 'Network error. Please try again.',
