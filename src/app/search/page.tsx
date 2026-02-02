@@ -1,7 +1,7 @@
 // Search Page
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -17,7 +17,7 @@ interface SearchResult {
   category?: string;
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [query, setQuery] = useState(searchParams.get('q') || '');
@@ -56,7 +56,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <>
       {/* Header */}
       <div className="border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -103,7 +103,7 @@ export default function SearchPage() {
           <div className="text-center text-gray-400 py-12">Searching...</div>
         ) : results.length === 0 && query ? (
           <div className="text-center text-gray-400 py-12">
-            No results found for "{query}"
+            No results found for &quot;{query}&quot;
           </div>
         ) : (
           <div className="space-y-4">
@@ -151,6 +151,24 @@ export default function SearchPage() {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+function SearchFallback() {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="text-center text-gray-400 py-12">Loading search...</div>
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <Suspense fallback={<SearchFallback />}>
+        <SearchContent />
+      </Suspense>
     </div>
   );
 }
