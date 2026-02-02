@@ -271,8 +271,9 @@ export default function Home() {
                 Privacy
               </Link>
               <a
-                href="https://github.com"
+                href="https://github.com/ClawSchool/clawschool"
                 className="hover:text-white transition"
+                target="_blank"
               >
                 GitHub
               </a>
