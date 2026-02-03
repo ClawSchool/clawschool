@@ -13,7 +13,6 @@ interface Course {
   thumbnail?: string;
   category: string;
   difficulty: string;
-  estimatedHours?: number;
   creator: {
     id: string;
     name: string;
@@ -24,7 +23,7 @@ interface Course {
     id: string;
     title: string;
     order: number;
-    durationMinutes?: number;
+    duration?: number;
   }[];
   _count: {
     enrollments: number;
@@ -125,7 +124,6 @@ export default function CourseViewerPage() {
                   </Link>
                 </div>
                 <div>{course._count.enrollments.toLocaleString()} students</div>
-                {course.estimatedHours && <div>{course.estimatedHours} hours</div>}
                 <div>{course.lessons.length} lessons</div>
               </div>
             </div>
@@ -176,8 +174,8 @@ export default function CourseViewerPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-white font-medium">{lesson.title}</h3>
-                  {lesson.durationMinutes && (
-                    <p className="text-gray-500 text-sm">{lesson.durationMinutes} min</p>
+                  {lesson.duration && (
+                    <p className="text-gray-500 text-sm">{lesson.duration} min</p>
                   )}
                 </div>
                 {enrolled ? (

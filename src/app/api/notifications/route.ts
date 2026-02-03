@@ -1,6 +1,7 @@
 // Notifications API
+// Note: Notification model needs to be added to Prisma schema
+// For now, returns empty array to allow the UI to work
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { authenticateRequest } from '@/lib/security';
 
 export async function GET(request: NextRequest) {
@@ -10,20 +11,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const notifications = await db.notification.findMany({
-      where: { userId: auth.user.userId },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      select: {
-        id: true,
-        type: true,
-        title: true,
-        message: true,
-        read: true,
-        linkUrl: true,
-        createdAt: true,
-      },
-    });
+    // TODO: Implement when Notification model is added to schema
+    // For now, return empty array
+    const notifications: Array<{
+      id: string;
+      type: string;
+      title: string;
+      message: string;
+      read: boolean;
+      linkUrl?: string;
+      createdAt: string;
+    }> = [];
 
     return NextResponse.json({ success: true, data: notifications });
   } catch (error) {

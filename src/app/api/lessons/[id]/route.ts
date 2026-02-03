@@ -16,8 +16,7 @@ export async function GET(
         title: true,
         content: true,
         order: true,
-        durationMinutes: true,
-        videoUrl: true,
+        duration: true,
         course: {
           select: {
             id: true,

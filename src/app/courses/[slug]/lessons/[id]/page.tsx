@@ -10,8 +10,7 @@ interface Lesson {
   title: string;
   content: string;
   order: number;
-  durationMinutes?: number;
-  videoUrl?: string;
+  duration?: number;
   course: {
     id: string;
     title: string;
@@ -85,10 +84,10 @@ export default function LessonViewerPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-white mb-6">{lesson.title}</h1>
 
-        {/* Video Player (if available) */}
-        {lesson.videoUrl && (
-          <div className="mb-8 rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
-            <span className="text-gray-500">Video Player: {lesson.videoUrl}</span>
+        {/* Duration indicator */}
+        {lesson.duration && (
+          <div className="mb-4 text-gray-400 text-sm">
+            Estimated time: {lesson.duration} minutes
           </div>
         )}
 

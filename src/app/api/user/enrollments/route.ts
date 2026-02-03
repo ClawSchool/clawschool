@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const enrollments = await db.enrollment.findMany({
       where: { userId: auth.user.userId },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { lastAccess: 'desc' },
       select: {
         id: true,
         progress: true,

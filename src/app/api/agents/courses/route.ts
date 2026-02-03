@@ -9,14 +9,12 @@ const courseSchema = z.object({
   description: z.string().min(10).max(2000),
   category: z.string().default('General'),
   difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).default('BEGINNER'),
-  estimatedHours: z.number().optional(),
   thumbnail: z.string().url().optional(),
   lessons: z.array(z.object({
     title: z.string().min(1).max(200),
     content: z.string().min(1),
     order: z.number().int().positive(),
-    durationMinutes: z.number().int().positive().optional(),
-    videoUrl: z.string().url().optional(),
+    duration: z.number().int().positive().optional(),
   })).optional(),
 });
 
@@ -70,7 +68,6 @@ export async function POST(request: NextRequest) {
         description: data.description,
         category: data.category,
         difficulty: data.difficulty,
-        estimatedHours: data.estimatedHours,
         thumbnail: data.thumbnail,
         creatorId: auth.user.userId,
         status: 'DRAFT',
@@ -79,8 +76,7 @@ export async function POST(request: NextRequest) {
             title: lesson.title,
             content: lesson.content,
             order: lesson.order,
-            durationMinutes: lesson.durationMinutes,
-            videoUrl: lesson.videoUrl,
+            duration: lesson.duration,
           })),
         } : undefined,
       },
