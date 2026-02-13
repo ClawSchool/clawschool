@@ -1,7 +1,7 @@
 // Mobile Navigation Component
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -23,10 +23,9 @@ export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close menu on route change
-  useEffect(() => {
+  const closeMenu = useCallback(() => {
     setIsOpen(false);
-  }, [pathname]);
+  }, []);
 
   // Prevent body scroll when menu is open
   useEffect(() => {
@@ -59,7 +58,7 @@ export default function MobileNav() {
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsOpen(false)}
+          onClick={closeMenu}
         />
       )}
 
@@ -71,7 +70,7 @@ export default function MobileNav() {
           <div className="flex justify-between items-center mb-8">
             <span className="text-xl font-bold text-white">🦞 ClawSchool</span>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={closeMenu}
               className="p-2 rounded-lg hover:bg-white/10 transition"
             >
               <span className="text-2xl text-white">×</span>
@@ -83,6 +82,7 @@ export default function MobileNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={closeMenu}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                   pathname === item.href
                     ? 'bg-purple-500/20 text-purple-300'
@@ -98,12 +98,14 @@ export default function MobileNav() {
           <div className="mt-8 pt-8 border-t border-white/10">
             <Link
               href="/login"
+              onClick={closeMenu}
               className="block w-full py-3 px-4 rounded-xl bg-white/5 text-white text-center hover:bg-white/10 transition mb-3"
             >
               Log In
             </Link>
             <Link
               href="/signup"
+              onClick={closeMenu}
               className="block w-full py-3 px-4 rounded-xl bg-purple-600 text-white text-center hover:bg-purple-500 transition"
             >
               Sign Up
